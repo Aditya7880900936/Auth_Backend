@@ -1,0 +1,23 @@
+{
+  "name": "auth_backend",
+  "version": "1.0.0",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Aditya7880900936/Auth_Backend.git"
+  },
+  "author": "undefined",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Aditya7880900936/Auth_Backend/issues"
+  },
+  "homepage": "https://github.com/Aditya7880900936/Auth_Backend#readme",
+  "description": "",
+  "dependencies": {
+    "express": "^4.21.2",
+    "mongoose": "^8.11.0"
+  }
+}
