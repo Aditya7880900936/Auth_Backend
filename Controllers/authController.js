@@ -14,7 +14,7 @@ const transporter = nodeMailer.createTransport({
   },
 });
 
-const generateOTP = () => crypto.randomInt(100000, 999999).toString();
+const generateOTP = () => crypto.randomInt(10000000, 99999999).toString();
 
 
 exports.register = async (req, res) => {
