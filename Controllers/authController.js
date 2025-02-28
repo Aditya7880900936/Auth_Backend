@@ -133,14 +133,14 @@ exports.login = async (req, res) => {
     }
 
     // Generate token
-    const token = generateToken(user._id);
+    const token = generateToken(user._id, res);
 
-    // Send response with token
     res.status(200).json({ 
-      success: true,
-      message: "User Logged In Successfully",
-      token
+        success: true,
+        message: "User Logged In Successfully",
+        token // ✅ Send token in response for frontend use
     });
+    
 
   } catch (error) {
     res.status(500).json({ message: "Error Logging In User", error });
