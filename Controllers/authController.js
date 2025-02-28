@@ -4,6 +4,7 @@ const User = require("../Models/User");
 
 const nodeMailer = require("nodemailer");
 const crypto = require("crypto");
+const generateToken = require("../lib/generate");
 
 const transporter = nodeMailer.createTransport({
   service: "gmail",
@@ -26,6 +27,7 @@ exports.register = async (req, res) => {
     const otp = generateOTP();
     const otpExpire = new Date(Date.now() + 10 * 60 * 1000);
     user = new User({ name, email, password, otp , otpExpire});
+    
     await user.save();
     const mailOptions = {
       from: process.env.EMAIL,
@@ -126,12 +128,7 @@ exports.login = async (req, res) => {
     if (user.password !== password) {
       return res.status(400).json({ message: "Incorrect Password" });
     }
-
-    req.session.user = {
-      _id: user._id,
-      name: user.name,
-      email: user.email,
-    };
+    generateToken(user._id,res);
     res.status(200).json({ message: "User Logged In Successfully" });
   } catch (error) {
     res.status(500).json({ message: "Error Logging In User", error });
@@ -140,7 +137,7 @@ exports.login = async (req, res) => {
 
 exports.logout = async (req, res) => {
   try {
-    req.session.destroy();
+    res.cookie("jwt","",{maxAge:0});
     res.status(200).json({ message: "User Logged Out Successfully" });
   } catch (error) {
     res.status(500).json({ message: "Error Logging Out User", error });
