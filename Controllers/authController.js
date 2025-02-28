@@ -119,21 +119,34 @@ exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
     let user = await User.findOne({ email });
+
     if (!user) {
       return res.status(400).json({ message: "User not found" });
     }
+
     if (!user.isVerified) {
-      return res.status(400).json({ message: "User not verified.Please Verify OTP" });
+      return res.status(400).json({ message: "User not verified. Please Verify OTP" });
     }
+
     if (user.password !== password) {
       return res.status(400).json({ message: "Incorrect Password" });
     }
-    generateToken(user._id,res);
-    res.status(200).json({ message: "User Logged In Successfully" });
+
+    // Generate token
+    const token = generateToken(user._id);
+
+    // Send response with token
+    res.status(200).json({ 
+      success: true,
+      message: "User Logged In Successfully",
+      token
+    });
+
   } catch (error) {
     res.status(500).json({ message: "Error Logging In User", error });
   }
 };
+
 
 exports.logout = async (req, res) => {
   try {
