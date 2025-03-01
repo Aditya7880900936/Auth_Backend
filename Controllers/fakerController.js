@@ -1,6 +1,5 @@
 const { faker } = require('@faker-js/faker');
-const { Category } = require('../Models/User');
-
+const Category = require('../Models/Categories');
 exports.getFakeData = (req, res) => {
     try {
         const categories = Array.from({ length: 100 }, () => ({

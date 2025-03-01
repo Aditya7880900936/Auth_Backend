@@ -23,17 +23,20 @@ const generateToken = (userId) => {
 exports.register = async (req, res) => {
   try {
     const { name, email, password } = req.body;
+
     let user = await User.findOne({ email });
-    if (user) return res.status(400).json({ message: "User already exists" });
+    if (user) {
+      return res.status(400).json({ message: "User already exists" });
+    }
 
     const otp = generateOTP();
     const otpExpire = Date.now() + 10 * 60 * 1000;
 
     const hashedPassword = await bcrypt.hash(password, 10);
-
     user = new User({ name, email, password: hashedPassword, otp, otpExpire });
 
     await user.save();
+    console.log("User saved successfully");
 
     const mailOptions = {
       from: process.env.EMAIL,
@@ -42,10 +45,12 @@ exports.register = async (req, res) => {
       html: `<p>Your OTP is <strong>${otp}</strong>. It expires in 10 minutes.</p>`,
     };
 
-    await transporter.sendMail(mailOptions);
+    const emailResult = await transporter.sendMail(mailOptions);
+    console.log("Email sent:", emailResult);
 
     res.status(200).json({ message: "User Registered. Please verify OTP sent to your email." });
   } catch (error) {
+    console.error("Error Registering User:", error);
     res.status(500).json({ message: "Error Registering User", error });
   }
 };

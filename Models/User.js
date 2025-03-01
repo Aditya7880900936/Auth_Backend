@@ -31,21 +31,8 @@ const userSchema = new mongoose.Schema(
   }
 );
 
-const categorySchema = new mongoose.Schema(
-  {
-    name: {
-      type: String,
-      required: true,
-      unique: true,
-    },
-  },
-  {
-    timestamps: true,
-  }
-);
 
-const Category = mongoose.model("Category", categorySchema);
 
 const User = mongoose.model("User", userSchema);
 
-module.exports = { User, Category };
+module.exports = User;
