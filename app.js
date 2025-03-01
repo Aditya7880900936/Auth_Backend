@@ -2,11 +2,14 @@ const express = require('express');
 const dotenv = require('dotenv');
 const cors = require('cors')
 const {connectDB} = require('./Config/db');
+const cookie = require('cookie-parser');
 dotenv.config();
 connectDB();
 
 const app = express();
 app.use(express.json());
+
+app.use(cookie());
 
 app.use(cors({
    origin:"https://e-commerce-revispy.vercel.app",
