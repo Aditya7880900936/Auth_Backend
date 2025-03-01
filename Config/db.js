@@ -9,6 +9,7 @@ const connectDB = async () => {
     await mongoose.connect(process.env.MONGO_URI);
     console.log("Connected to MongoDB Successfully");
     await User.createCollection();
+    
     console.log("User Collection is created successfully");
   } catch (error) {
     console.log("MongoDB Connection Failed",error.message);

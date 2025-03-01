@@ -1,10 +1,8 @@
-
-
 const User = require("../Models/User");
-
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
 const nodeMailer = require("nodemailer");
 const crypto = require("crypto");
-const generateToken = require("../lib/generate");
 
 const transporter = nodeMailer.createTransport({
   service: "gmail",
@@ -16,36 +14,37 @@ const transporter = nodeMailer.createTransport({
 
 const generateOTP = () => crypto.randomInt(10000000, 99999999).toString();
 
+const generateToken = (userId) => {
+  return jwt.sign({ id: userId }, process.env.JWT_SECRET, {
+    expiresIn: "7d",
+  });
+};
 
 exports.register = async (req, res) => {
   try {
-    const { name , email, password } = req.body;
+    const { name, email, password } = req.body;
     let user = await User.findOne({ email });
-    if (user) {
-      return res.status(400).json({ message: "User already exists" });
-    }
+    if (user) return res.status(400).json({ message: "User already exists" });
+
     const otp = generateOTP();
-    const otpExpire = new Date(Date.now() + 10 * 60 * 1000);
-    user = new User({ name, email, password, otp , otpExpire});
-    
+    const otpExpire = Date.now() + 10 * 60 * 1000;
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    user = new User({ name, email, password: hashedPassword, otp, otpExpire });
+
     await user.save();
+
     const mailOptions = {
       from: process.env.EMAIL,
       to: email,
       subject: "OTP Verification",
-      text:``,
-      html:  `
-            <div style="font-family: Arial, sans-serif; background-color: #f4f4f4; text-align: center; padding: 20px;">
-                <div style="max-width: 500px; background: #ffffff; padding: 20px; border-radius: 8px; margin: auto; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);">
-                    <h2 style="color: #333;">You're Invited! 🎉</h2>
-                    <p>Hello Your OTP is,</p>
-                    <p>${otp}</p>
-                    <p style="margin-top: 20px; font-size: 14px; color: #777;">© 2025 Aditya. All rights reserved.</p>
-                </div>
-            </div>`
+      html: `<p>Your OTP is <strong>${otp}</strong>. It expires in 10 minutes.</p>`,
     };
+
     await transporter.sendMail(mailOptions);
-    res.status(200).json({ message: "User Registered. Please Verify OTP sent to your email" });
+
+    res.status(200).json({ message: "User Registered. Please verify OTP sent to your email." });
   } catch (error) {
     res.status(500).json({ message: "Error Registering User", error });
   }
@@ -55,114 +54,93 @@ exports.verifyOTP = async (req, res) => {
   try {
     const { email, otp } = req.body;
     let user = await User.findOne({ email });
-    if (!user) {
-      return res.status(400).json({ message: "User not found" });
-    }
-    if(user.isVerified){
-        return res.status(400).json({ message: "User already verified" });
-    }
-    if (user.otp !== otp) {
-      return res.status(400).json({ message: "Invalid OTP" });
-    }
-    if (user.otpExpire < Date.now()) {
-      return res.status(400).json({ message: "OTP has expired" });
-    }
+    if (!user) return res.status(400).json({ message: "User not found" });
+
+    if (user.isVerified) return res.status(400).json({ message: "User already verified" });
+
+    if (user.otp !== otp) return res.status(400).json({ message: "Invalid OTP" });
+
+    if (user.otpExpire < Date.now()) return res.status(400).json({ message: "OTP expired" });
+
     user.isVerified = true;
     user.otp = undefined;
     user.otpExpire = undefined;
     await user.save();
-    res.status(200).json({ message: "Email Verified Successfully. Now You can Login" });
+
+    res.status(200).json({ message: "Email Verified. You can now login." });
   } catch (error) {
     res.status(500).json({ message: "Error Verifying User", error });
   }
 };
 
-
 exports.resendOTP = async (req, res) => {
   try {
     const { email } = req.body;
     let user = await User.findOne({ email });
-    if (!user) {
-      return res.status(400).json({ message: "User not found" });
-    }
-    if(user.isVerified){
-        return res.status(400).json({ message: "User already verified" });
-    }
+    if (!user) return res.status(400).json({ message: "User not found" });
+
+    if (user.isVerified) return res.status(400).json({ message: "User already verified" });
+
     const otp = generateOTP();
-    const otpExpire = new Date(Date.now() + 10 * 60 * 1000);
     user.otp = otp;
-    user.otpExpire = otpExpire;
+    user.otpExpire = Date.now() + 10 * 60 * 1000;
     await user.save();
+
     const mailOptions = {
       from: process.env.EMAIL,
       to: email,
       subject: "OTP Verification",
-      text: `Your OTP is ${otp}`,
-      html:  `
-            <div style="font-family: Arial, sans-serif; background-color: #f4f4f4; text-align: center; padding: 20px;">
-                <div style="max-width: 500px; background: #ffffff; padding: 20px; border-radius: 8px; margin: auto; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);">
-                    <h2 style="color: #333;">You're Invited! 🎉</h2>
-                    <p>Hello Your OTP is,</p>
-                    <p>${otp}</p>
-                    <p style="margin-top: 20px; font-size: 14px; color: #777;">© 2025 Aditya. All rights reserved.</p>
-                </div>
-            </div>`
+      html: `<p>Your OTP is <strong>${otp}</strong>. It expires in 10 minutes.</p>`,
     };
+
     await transporter.sendMail(mailOptions);
-    res.status(200).json({ message: "OTP resent to your email" });
+
+    res.status(200).json({ message: "OTP resent to your email." });
   } catch (error) {
     res.status(500).json({ message: "Error Resending OTP", error });
   }
 };
 
-exports.login = async (req, res) => {   
+exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
     let user = await User.findOne({ email });
 
-    if (!user) {
-      return res.status(400).json({ message: "User not found" });
-    }
+    if (!user) return res.status(400).json({ message: "User not found" });
 
-    if (!user.isVerified) {
-      return res.status(400).json({ message: "User not verified. Please Verify OTP" });
-    }
+    if (!user.isVerified) return res.status(400).json({ message: "Please verify OTP before logging in." });
 
-    if (user.password !== password) {
-      return res.status(400).json({ message: "Incorrect Password" });
-    }
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) return res.status(400).json({ message: "Incorrect Password" });
 
-    // Generate token
-    const token = generateToken(user._id, res);
+    const token = generateToken(user._id);
 
-    res.status(200).json({ 
-        success: true,
-        message: "User Logged In Successfully",
-        token // ✅ Send token in response for frontend use
+    res.cookie("jwt", token, { httpOnly: true, secure: process.env.NODE_ENV === "production" });
+
+    res.status(200).json({
+      success: true,
+      message: "User Logged In Successfully",
+      token,
     });
-    
-
   } catch (error) {
     res.status(500).json({ message: "Error Logging In User", error });
   }
 };
 
-
 exports.logout = async (req, res) => {
   try {
-    res.cookie("jwt","",{maxAge:0});
+    res.clearCookie("jwt");
     res.status(200).json({ message: "User Logged Out Successfully" });
   } catch (error) {
     res.status(500).json({ message: "Error Logging Out User", error });
   }
-}
+};
 
 exports.dashboard = async (req, res) => {
   try {
-    const user = req.session.user;
-    if (!user) {
-      return res.status(400).json({ message: "User not logged in" });
-    }
+    const user = req.user;
+    if (!user) return res.status(400).json({ message: "User not logged in" });
+
     res.status(200).json({ message: "User Dashboard", user });
   } catch (error) {
     res.status(500).json({ message: "Error Fetching Dashboard", error });
